@@ -1,7 +1,108 @@
 {
   "dataset_id": "day04_v2_research_group",
   "dataset_role": "group",
-  "description": "Case do NHÓM tự viết thêm để cover thêm trường hợp. Mỗi case cần: id, phase='B', query HOẶC turns, failure_type (thuộc allowed_failure_types), và expect (tool_calls[...] hoặc no_tool=true). Nên kèm metadata.what_it_tests.",
+  "description": "Case do NHÓM tự viết thêm để cover thêm trường hợp. Mỗi case cần: id, phase='B', query HOẶC turns, failure_type (thuộc allowed_failure_types), và expect (tool_calls[...] hoặc no_tool=true). Nên kèm metadata.what_it_tests. Bộ này mở rộng sang các bonus tool (papers, paper_text, policy, send) mà eval_base chưa cover, và thêm các boundary khó hơn.",
   "allowed_failure_types": ["wrong_tool", "wrong_arg_value", "wrong_boundary", "unnecessary_tool", "out_of_scope", "missing_info"],
-  "cases": []
+  "cases": [
+    {
+      "id": "G01_papers_routing",
+      "phase": "B", "suite": "group",
+      "query": "Tìm giúp mình vài bài báo khoa học về diffusion models",
+      "failure_type": "wrong_tool",
+      "expect": {"tool_calls": [{"name": "papers", "args": {}}]},
+      "metadata": {"skill": "routing_papers", "difficulty": "medium", "what_it_tests": "'bài báo khoa học' → papers (arXiv), KHÔNG phải lookup web thường."}
+    },
+    {
+      "id": "G02_policy_routing",
+      "phase": "B", "suite": "group",
+      "query": "Theo chính sách công ty, mình có được tự publish nội dung research ra ngoài không?",
+      "failure_type": "wrong_tool",
+      "expect": {"tool_calls": [{"name": "policy", "args": {}}]},
+      "metadata": {"skill": "routing_policy_internal", "difficulty": "medium", "what_it_tests": "Hỏi về CHÍNH SÁCH NỘI BỘ công ty → policy (KB nội bộ), không phải lookup trên web."}
+    },
+    {
+      "id": "G03_timeframe_month",
+      "phase": "B", "suite": "group",
+      "query": "Tổng hợp tin AI nổi bật trong tháng này",
+      "failure_type": "wrong_arg_value",
+      "expect": {"tool_calls": [{"name": "lookup", "args": {"topic": "news", "timeframe": "month"}}]},
+      "metadata": {"skill": "arg_timeframe_month", "difficulty": "medium", "what_it_tests": "'tháng này' → timeframe=month (không phải week mặc định), topic=news."}
+    },
+    {
+      "id": "G04_out_of_scope_translation",
+      "phase": "B", "suite": "group",
+      "query": "Dịch đoạn này sang tiếng Anh giúp mình: 'Trí tuệ nhân tạo đang thay đổi thế giới.'",
+      "failure_type": "out_of_scope",
+      "expect": {"no_tool": true, "behavior": "refuse"},
+      "metadata": {"skill": "out_of_scope_translation", "difficulty": "easy", "what_it_tests": "Yêu cầu dịch thuật ngoài phạm vi research → KHÔNG gọi tool, từ chối/định hướng."}
+    },
+    {
+      "id": "G05_send_confirmed",
+      "phase": "B", "suite": "group",
+      "query": "Gửi đúng đoạn text 'Xin chào cả nhà, đây là bản tin AI hôm nay.' lên Telegram giúp mình, mình xác nhận gửi luôn nhé.",
+      "failure_type": "wrong_boundary",
+      "expect": {"tool_calls": [{"name": "send", "args": {"confirmed": true}}]},
+      "metadata": {"skill": "send_when_confirmed", "difficulty": "hard", "what_it_tests": "User đã xác nhận RÕ nội dung + hành động gửi ngay → gọi send với confirmed=true, KHÔNG hỏi lại nữa (mặt còn lại của boundary so với R12)."}
+    },
+    {
+      "id": "G06_paper_then_paper_text",
+      "phase": "B", "suite": "group",
+      "turns": [
+        {"role": "user", "content": "Tìm paper về retrieval augmented generation"},
+        {"role": "user", "content": "Mình muốn đọc full nội dung bài này: https://arxiv.org/abs/2401.12345"},
+        {"role": "user", "content": "Chỉ cần trích text của đúng bài đó thôi"}
+      ],
+      "failure_type": "wrong_tool",
+      "expect": {"tool_calls": [{"name": "paper_text", "args": {"arxiv_url": "https://arxiv.org/abs/2401.12345"}}]},
+      "metadata": {"skill": "multiturn_paper_text", "difficulty": "hard", "what_it_tests": "3 turns: link là arXiv + yêu cầu trích full text bài → paper_text với arxiv_url, KHÔNG phải fetch URL thường."}
+    },
+    {
+      "id": "G07_multiturn_search_type_correction",
+      "phase": "B", "suite": "group",
+      "turns": [
+        {"role": "user", "content": "Tìm tweet về Anthropic"},
+        {"role": "user", "content": "Cho mình loại phổ biến (top) nhất thôi"},
+        {"role": "user", "content": "Vẫn giữ chủ đề Anthropic nhé"}
+      ],
+      "failure_type": "wrong_arg_value",
+      "expect": {"tool_calls": [{"name": "social_search", "args": {"query": "Anthropic", "search_type": "Top"}}]},
+      "metadata": {"skill": "multiturn_search_type", "difficulty": "hard", "what_it_tests": "3 turns: carry query=Anthropic, sửa search_type Latest→Top theo lượt 2."}
+    },
+    {
+      "id": "G08_multiturn_still_missing_handle",
+      "phase": "B", "suite": "group",
+      "turns": [
+        {"role": "user", "content": "Tóm tắt vài tweet mới nhất giúp mình"},
+        {"role": "user", "content": "Khoảng 5 cái thôi"},
+        {"role": "user", "content": "Ừ mới nhất nhé"}
+      ],
+      "failure_type": "missing_info",
+      "expect": {"tool_calls": [{"name": "clarify", "args": {"response_type": "text"}}]},
+      "metadata": {"skill": "multiturn_persist_clarify", "difficulty": "hard", "what_it_tests": "3 turns nhưng VẪN thiếu screenname → tiếp tục clarify, KHÔNG đoán bừa account dù đã có limit."}
+    },
+    {
+      "id": "G09_multiturn_followup_meta",
+      "phase": "B", "suite": "group",
+      "turns": [
+        {"role": "user", "content": "Tin AI hôm nay có gì?"},
+        {"role": "user", "content": "Cảm ơn nhé, vậy là đủ rồi"},
+        {"role": "user", "content": "Mà bạn còn giúp được mình những việc gì nữa?"}
+      ],
+      "failure_type": "unnecessary_tool",
+      "expect": {"no_tool": true, "behavior": "answer_without_tool"},
+      "metadata": {"skill": "multiturn_meta_no_tool", "difficulty": "medium", "what_it_tests": "3 turns: latest turn là câu hỏi meta về năng lực → trả lời thẳng, KHÔNG gọi lại tool research."}
+    },
+    {
+      "id": "G10_multiturn_confirm_then_send",
+      "phase": "B", "suite": "group",
+      "turns": [
+        {"role": "user", "content": "Soạn giúp mình một dòng bản tin ngắn về AI hôm nay"},
+        {"role": "user", "content": "Ok giờ đăng đúng dòng đó lên Telegram đi"},
+        {"role": "user", "content": "Ừ mình xác nhận, đăng luôn nhé"}
+      ],
+      "failure_type": "wrong_boundary",
+      "expect": {"tool_calls": [{"name": "send", "args": {"confirmed": true}}]},
+      "metadata": {"skill": "multiturn_confirm_send", "difficulty": "hard", "what_it_tests": "3 turns: sau khi user xác nhận RÕ ở lượt cuối → gọi send confirmed=true, không clarify lại lần nữa."}
+    }
+  ]
 }
