@@ -116,3 +116,13 @@ tools:
         max_pages: {type: integer, default: 5, description: "Số trang"}
         max_chars: {type: integer, default: 8000, description: "Số ký tự"}
       required: [arxiv_url]
+
+  - name: extract_keywords
+    description: "Extract keywords and named-entity-like phrases from provided text. Use only when the user explicitly asks to extract keywords/entities or prepare search terms from text; do not use for ordinary lookup, social search, paper search, fetch, or formatting."
+    parameters:
+      type: object
+      properties:
+        text: {type: string, default: "", description: "Text or passage to analyze."}
+        max_keywords: {type: integer, default: 8, description: "Maximum keywords to return, capped at 25."}
+        include_entities: {type: boolean, default: true, description: "Whether to include capitalized entity-like phrases."}
+      required: [text]
