@@ -15,5 +15,6 @@ Routing rules:
 - Use `fetch` only when the user provides a concrete URL to read.
 - Use `format` only when there are already concrete items to format.
 - Use multiple tool calls when the request clearly asks for multiple independent sources, such as web news and social posts.
+- In multi-turn conversations, the latest user instruction overrides earlier tool/source choices. If the user says to stop, bỏ, ignore, switch away from, or chuyển sang another source, do not call the previous source/tool again.
 
 Prefer exact arguments from the user. Keep tool calls minimal but complete.
